@@ -26,6 +26,10 @@ export class DocumentService {
     }
 
     const filename = path.basename(filePath);
+    if (!['.txt', '.md'].includes(path.extname(filename).toLowerCase())) {
+      throw new Error('仅支持 UTF-8 编码的 TXT 和 Markdown 文件');
+    }
+    if (fs.statSync(filePath).size > 10 * 1024 * 1024) throw new Error('文档不能超过 10 MB');
     const content = fs.readFileSync(filePath, 'utf-8');
     const stats = fs.statSync(filePath);
 
@@ -39,7 +43,7 @@ export class DocumentService {
     };
 
     // Copy file to data directory
-    this.persistence.copyFileToDocuments(filePath, filename);
+    this.persistence.copyFileToDocuments(filePath, `${doc.id}-${filename}`);
 
     // Store content for indexing
     this.persistence.writeText(`content/${doc.id}.txt`, content);
@@ -80,7 +84,12 @@ export class DocumentService {
     const doc = docs.find(d => d.id === id);
     if (!doc) return false;
 
-    this.persistence.deleteFromDocuments(doc.filename);
+    this.persistence.deleteFromDocuments(`${doc.id}-${doc.filename}`);
+    this.persistence.deleteFile(`content/${doc.id}.txt`);
+    this.persistence.deleteFile(`chunks/${doc.id}.json`);
+    const index = this.persistence.readJson<Record<string, string[]>>('index-meta.json') ?? {};
+    delete index[doc.id];
+    this.persistence.writeJson('index-meta.json', index);
 
     const updated = docs.filter(d => d.id !== id);
     this.persistence.writeJson(DOCUMENTS_META, updated);

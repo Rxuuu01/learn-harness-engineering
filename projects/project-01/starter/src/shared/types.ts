@@ -62,4 +62,7 @@ export const IPC_CHANNELS = {
 
   // App status
   GET_STATUS: 'app:status',
+  PICK_DOCUMENTS: 'documents:pick',
+  DATA_DIRECTORY: 'app:data-directory',
+  OPEN_DATA_DIRECTORY: 'app:open-data-directory',
 } as const;

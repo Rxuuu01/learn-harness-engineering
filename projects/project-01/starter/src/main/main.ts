@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 import { DocumentService } from '../services/document-service';
@@ -20,15 +20,13 @@ function createWindow() {
       nodeIntegration: false,
     },
     title: 'Knowledge Base',
+    backgroundColor: '#f6f7fb',
+    autoHideMenuBar: true,
   });
 
-  // In development, load from Vite dev server or built renderer
-  const isDev = !app.isPackaged;
-  if (isDev) {
-    mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  }
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('will-navigate', event => event.preventDefault());
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -42,6 +40,23 @@ function initializeServices() {
   const indexingService = new IndexingService(persistence);
   const qaService = new QaService(persistence);
 
+  ipcMain.handle('app:data-directory', () => dataDir);
+  ipcMain.handle('app:open-data-directory', () => shell.openPath(dataDir));
+  ipcMain.handle('documents:pick', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '导入知识库文档', properties: ['openFile', 'multiSelections'],
+      filters: [{ name: '文本与 Markdown', extensions: ['txt', 'md'] }],
+    });
+    if (result.canceled) return [];
+    const imported = [];
+    for (const file of result.filePaths) {
+      const doc = documentService.importDocument(file);
+      await indexingService.startIndexing(doc.id);
+      imported.push(doc);
+    }
+    return imported;
+  });
+
   registerIpcHandlers(ipcMain, {
     documentService,
     indexingService,
@@ -49,7 +64,14 @@ function initializeServices() {
   });
 }
 
-app.whenReady().then(() => {
+const primaryInstance = app.requestSingleInstanceLock();
+if (!primaryInstance) app.quit();
+app.on('second-instance', () => {
+  if (mainWindow?.isMinimized()) mainWindow.restore();
+  mainWindow?.focus();
+});
+
+if (primaryInstance) app.whenReady().then(() => {
   initializeServices();
   createWindow();
 
@@ -58,6 +80,9 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+}).catch(error => {
+  dialog.showErrorBox('知识库启动失败', String(error));
+  app.quit();
 });
 
 app.on('window-all-closed', () => {

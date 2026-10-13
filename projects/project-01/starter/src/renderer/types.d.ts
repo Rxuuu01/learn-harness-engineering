@@ -1,26 +1,12 @@
-/// <reference types="react" />
-/// <reference types="react-dom" />
-
+import type { Document, AppStatus, Chunk, QAResponse, QAHistory } from '../shared/types';
 declare global {
-  interface Window {
-    knowledgeBase: {
-      documents: {
-        list: () => Promise<import('../shared/types').Document[]>;
-        import: (filePath: string) => Promise<import('../shared/types').Document>;
-        get: (id: string) => Promise<import('../shared/types').Document | null>;
-        delete: (id: string) => Promise<boolean>;
-      };
-      indexing: {
-        start: (documentId?: string) => Promise<import('../shared/types').AppStatus>;
-        status: () => Promise<import('../shared/types').AppStatus>;
-        chunks: (documentId: string) => Promise<import('../shared/types').Chunk[]>;
-      };
-      qa: {
-        ask: (question: string) => Promise<import('../shared/types').QAResponse>;
-        history: () => Promise<import('../shared/types').QAHistory[]>;
-      };
-    };
-  }
+ interface Window {
+  knowledgeBase: {
+   dataDirectory: () => Promise<string>;
+   openDataDirectory: () => Promise<string>;
+   documents: { pick: () => Promise<Document[]>; list: () => Promise<Document[]>; import: (path: string) => Promise<Document>; get: (id: string) => Promise<Document | null>; delete: (id: string) => Promise<boolean> };
+   indexing: { start: (id?: string) => Promise<AppStatus>; status: () => Promise<AppStatus>; chunks: (id: string) => Promise<Chunk[]> };
+   qa: { ask: (question: string) => Promise<QAResponse>; history: () => Promise<QAHistory[]> };
+  };
+ }
 }
-
-export {};

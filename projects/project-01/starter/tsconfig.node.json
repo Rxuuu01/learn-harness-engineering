@@ -19,5 +19,6 @@
     },
     "baseUrl": "."
   },
-  "include": ["src/main", "src/preload", "src/shared", "src/services"]
+  "include": ["src/main", "src/preload", "src/shared", "src/services"],
+  "exclude": ["src/**/*.test.ts"]
 }
