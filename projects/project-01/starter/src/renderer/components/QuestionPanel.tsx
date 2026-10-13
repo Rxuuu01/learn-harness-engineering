@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 
 interface Props {
-  onAsk: (question: string) => void;
+  onAsk: (question: string) => Promise<void>;
 }
 
 export function QuestionPanel({ onAsk }: Props) {
   const [question, setQuestion] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) return;
-    onAsk(question.trim());
-    setQuestion('');
+    if (!question.trim() || busy) return;
+    setBusy(true);
+    try { await onAsk(question.trim()); setQuestion(''); }
+    catch { /* Parent displays the error; preserve the question for retry. */ }
+    finally { setBusy(false); }
   };
 
   return (
@@ -28,7 +31,8 @@ export function QuestionPanel({ onAsk }: Props) {
         type="text"
         value={question}
         onChange={e => setQuestion(e.target.value)}
-        placeholder="Ask a question about your documents..."
+        aria-label="向知识库提问"
+        placeholder="输入问题或文档关键词…"
         style={{
           flex: 1,
           padding: '10px 14px',
@@ -42,6 +46,7 @@ export function QuestionPanel({ onAsk }: Props) {
       />
       <button
         type="submit"
+        disabled={busy || !question.trim()}
         style={{
           marginLeft: '10px',
           padding: '10px 20px',
@@ -54,7 +59,7 @@ export function QuestionPanel({ onAsk }: Props) {
           fontWeight: 500,
         }}
       >
-        Ask
+        {busy ? '检索中…' : '提问'}
       </button>
     </form>
   );

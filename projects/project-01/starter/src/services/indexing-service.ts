@@ -21,24 +21,13 @@ export class IndexingService {
 
   /** Start indexing documents. If documentId is provided, index only that document. */
   async startIndexing(documentId?: string): Promise<IndexStatus> {
-    const status = this.getStatus();
-
-    if (documentId) {
-      // Index a single document
-      const content = this.persistence.readText(`content/${documentId}.txt`);
-      if (!content) {
-        return { ...status, status: 'error' };
-      }
-      const chunks = this.chunkDocument(documentId, content);
-      this.persistence.writeJson(`${CHUNKS_DIR}/${documentId}.json`, chunks);
-      return this.getStatus();
-    }
 
     // Index all documents that haven't been indexed yet
     const docsMeta = this.persistence.readJson<Document[]>('documents-meta.json') ?? [];
     const chunksMeta = this.persistence.readJson<Record<string, string[]>>(INDEX_META) ?? {};
 
     for (const doc of docsMeta) {
+      if (documentId && doc.id !== documentId) continue;
       if (chunksMeta[doc.id]) continue;
 
       const content = this.persistence.readText(`content/${doc.id}.txt`);
@@ -47,8 +36,11 @@ export class IndexingService {
       const chunks = this.chunkDocument(doc.id, content);
       this.persistence.writeJson(`${CHUNKS_DIR}/${doc.id}.json`, chunks);
       chunksMeta[doc.id] = chunks.map(c => c.id);
+      doc.status = 'indexed';
+      doc.chunks = chunks.length;
     }
 
+    this.persistence.writeJson('documents-meta.json', docsMeta);
     this.persistence.writeJson(INDEX_META, chunksMeta);
     return this.getStatus();
   }

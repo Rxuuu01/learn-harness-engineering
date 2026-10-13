@@ -36,7 +36,8 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_INDEXING_STATUS, async () => {
-    return indexingService.getStatus();
+    const status = indexingService.getStatus();
+    return { documentsLoaded: status.totalDocuments, indexStatus: status.status, lastActivity: status.lastIndexed ?? '' };
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_CHUNKS, async (_event, documentId: string) => {

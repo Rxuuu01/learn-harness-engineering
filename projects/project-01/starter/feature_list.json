@@ -1,0 +1,29 @@
+
+{
+  "features": [
+    {
+      "id": "window-launch",
+      "name": "Electron window launches",
+      "status": "passed",
+      "evidence": "scripts/smoke.cjs launched a visible Electron BrowserWindow and loaded the renderer/preload; nodeIntegration disabled and contextIsolation enabled. npm run check and npm run build passed."
+    },
+    {
+      "id": "document-list",
+      "name": "Document list on the left",
+      "status": "passed",
+      "evidence": "Electron smoke clicked the import button with a stubbed native file chooser, imported design-notes.md, verified its title in rendered DOM and left-panel geometry. Native chooser interaction itself is not automated."
+    },
+    {
+      "id": "qa-panel",
+      "name": "QA panel on the right",
+      "status": "passed",
+      "evidence": "Electron smoke verified right-panel geometry, entered architecture in the form and submitted, then verified persisted answer with document citations. Local keyword retrieval only; no AI model connected."
+    },
+    {
+      "id": "local-data",
+      "name": "Local persistent data directory",
+      "status": "passed",
+      "evidence": "Electron smoke confirmed documents-meta.json and qa-history.json under userData/knowledge-base-data. A second Electron process using data/smoke-1791860341363 restored one indexed document and one question record."
+    }
+  ]
+}

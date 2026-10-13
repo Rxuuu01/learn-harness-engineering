@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 import { DocumentService } from '../services/document-service';
@@ -18,6 +18,7 @@ function createWindow() {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
     title: 'Knowledge Base',
   });
@@ -41,6 +42,14 @@ function initializeServices() {
   const documentService = new DocumentService(persistence);
   const indexingService = new IndexingService(persistence);
   const qaService = new QaService(persistence);
+  ipcMain.handle('app:data-directory', () => dataDir);
+  ipcMain.handle('documents:choose', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'Text documents', extensions: ['txt', 'md'] }] });
+    if (result.canceled) return null;
+    const doc = documentService.importDocument(result.filePaths[0]);
+    await indexingService.startIndexing();
+    return documentService.getDocument(doc.id);
+  });
 
   registerIpcHandlers(ipcMain, {
     documentService,

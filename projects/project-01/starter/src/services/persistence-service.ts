@@ -31,7 +31,8 @@ export class PersistenceService {
     const fullPath = path.join(this.dataDir, relativePath);
     const dir = path.dirname(fullPath);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(fullPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(fullPath + '.tmp', JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(fullPath + '.tmp', fullPath);
   }
 
   /** Read a text file. */

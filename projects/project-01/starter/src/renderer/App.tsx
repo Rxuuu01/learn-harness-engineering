@@ -1,13 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse } from '../../shared/types';
+import { Document, AppStatus, QAResponse } from '../shared/types';
 
 declare global {
   interface Window {
     knowledgeBase: {
+      dataDirectory: () => Promise<string>;
+      chooseDocument: () => Promise<Document | null>;
       documents: {
         list: () => Promise<Document[]>;
         import: (filePath: string) => Promise<Document>;
@@ -17,7 +19,7 @@ declare global {
       indexing: {
         start: (documentId?: string) => Promise<{ status: string }>;
         status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
+        chunks: (documentId: string) => Promise<import('../shared/types').Chunk[]>;
       };
       qa: {
         ask: (question: string) => Promise<QAResponse>;
@@ -28,6 +30,8 @@ declare global {
 }
 
 export function App() {
+  const [dataDirectory, setDataDirectory] = useState('');
+  const [error, setError] = useState('');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [appStatus, setAppStatus] = useState<AppStatus>({
@@ -44,15 +48,21 @@ export function App() {
       const status = await window.knowledgeBase.indexing.status();
       setAppStatus(status);
     } catch (err) {
-      console.error('Failed to refresh documents:', err);
+      setError(String(err));
     }
   }, []);
 
   const handleImport = useCallback(async () => {
-    // In a real app this would open a file dialog.
-    // For the course, we'll trigger import via the dev console or init script.
-    console.log('Import triggered - use window.knowledgeBase.documents.import(filePath)');
-  }, []);
+    setError('');
+    try { await window.knowledgeBase.chooseDocument(); await refreshDocuments(); }
+    catch (err) { setError(String(err)); }
+  }, [refreshDocuments]);
+
+  useEffect(() => {
+    void refreshDocuments();
+    window.knowledgeBase.dataDirectory().then(setDataDirectory).catch(err => setError(String(err)));
+    window.knowledgeBase.qa.history().then(h => { if (h.length) setLastResponse(h[h.length - 1].response); }).catch(err => setError(String(err)));
+  }, [refreshDocuments]);
 
   const handleSelectDocument = useCallback((doc: Document) => {
     setSelectedDoc(doc);
@@ -63,7 +73,8 @@ export function App() {
       const response = await window.knowledgeBase.qa.ask(question);
       setLastResponse(response);
     } catch (err) {
-      console.error('Q&A failed:', err);
+      setError(String(err));
+      throw err;
     }
   }, []);
 
@@ -77,7 +88,7 @@ export function App() {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 600 }}>Knowledge Base</h1>
+        <h1 style={{ fontSize: '18px', fontWeight: 600 }}>知页 · 本地知识库</h1>
         <button
           onClick={refreshDocuments}
           style={{
@@ -90,7 +101,7 @@ export function App() {
             fontSize: '13px',
           }}
         >
-          Refresh
+          刷新
         </button>
       </header>
 
@@ -111,7 +122,7 @@ export function App() {
             alignItems: 'center',
           }}>
             <span style={{ fontSize: '13px', fontWeight: 500, color: '#a0a0c0' }}>
-              Documents ({documents.length})
+              我的文档 ({documents.length})
             </span>
             <button
               onClick={handleImport}
@@ -125,7 +136,7 @@ export function App() {
                 fontSize: '12px',
               }}
             >
-              + Import
+              ＋ 导入文档
             </button>
           </div>
           <DocumentList
@@ -142,7 +153,7 @@ export function App() {
               <DocumentDetail document={selectedDoc} />
             ) : (
               <div style={{ color: '#666', textAlign: 'center', paddingTop: '40px' }}>
-                Select a document or ask a question to get started
+                选择左侧文档，或在下方提问。支持导入 TXT、Markdown 文件。
               </div>
             )}
             {lastResponse && (
@@ -156,7 +167,7 @@ export function App() {
                 <div style={{ fontSize: '14px', lineHeight: 1.6 }}>{lastResponse.answer}</div>
                 {lastResponse.citations.length > 0 && (
                   <div style={{ marginTop: '10px', fontSize: '12px', color: '#8888bb' }}>
-                    <strong>Citations:</strong>
+                    <strong>原文出处：</strong>
                     {lastResponse.citations.map((c, i) => (
                       <div key={i} style={{ marginTop: '4px', paddingLeft: '8px', borderLeft: '2px solid #533483' }}>
                         {c.documentTitle} (chunk {c.chunkIndex}): {c.excerpt.substring(0, 100)}...
@@ -172,6 +183,8 @@ export function App() {
         </div>
       </div>
 
+      {error && <div role="alert" style={{padding: 12, color: '#ffb5b5'}}>{error}</div>}
+      <div style={{padding: '8px 20px', fontSize: 12, overflowWrap: 'anywhere'}}>本地数据目录：{dataDirectory || '正在初始化…'}</div>
       <StatusBar status={appStatus} />
     </div>
   );

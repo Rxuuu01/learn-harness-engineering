@@ -25,6 +25,7 @@ export class DocumentService {
       throw new Error(`File not found: ${filePath}`);
     }
 
+    if (!['.txt', '.md'].includes(path.extname(filePath).toLowerCase())) throw new Error('仅支持 TXT、Markdown 文档');
     const filename = path.basename(filePath);
     const content = fs.readFileSync(filePath, 'utf-8');
     const stats = fs.statSync(filePath);

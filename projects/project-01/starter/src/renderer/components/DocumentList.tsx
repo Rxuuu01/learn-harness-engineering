@@ -1,5 +1,4 @@
-import React from 'react';
-import { Document } from '../../../shared/types';
+import { Document } from '../../shared/types';
 
 interface Props {
   documents: Document[];
@@ -11,10 +10,10 @@ export function DocumentList({ documents, onSelect, selectedId }: Props) {
   if (documents.length === 0) {
     return (
       <div style={{ padding: '20px 16px', color: '#666', fontSize: '13px', textAlign: 'center' }}>
-        No documents imported yet.
+        暂无文档
         <br />
         <span style={{ fontSize: '11px', color: '#555' }}>
-          Import documents to get started.
+          点击上方按钮导入 TXT 或 Markdown 文档。
         </span>
       </div>
     );

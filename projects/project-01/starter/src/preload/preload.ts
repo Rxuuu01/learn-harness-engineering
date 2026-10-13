@@ -1,7 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS } from '../shared/types';
+// Sandboxed preload must not require local CommonJS modules.
+const IPC_CHANNELS = {
+  LIST_DOCUMENTS: 'documents:list', IMPORT_DOCUMENT: 'documents:import',
+  GET_DOCUMENT: 'documents:get', DELETE_DOCUMENT: 'documents:delete',
+  START_INDEXING: 'indexing:start', GET_INDEXING_STATUS: 'indexing:status',
+  GET_CHUNKS: 'indexing:chunks', ASK_QUESTION: 'qa:ask', GET_HISTORY: 'qa:history',
+};
 
 const api = {
+  dataDirectory: () => ipcRenderer.invoke('app:data-directory'),
+  chooseDocument: () => ipcRenderer.invoke('documents:choose'),
   documents: {
     list: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_DOCUMENTS),
     import: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.IMPORT_DOCUMENT, filePath),
